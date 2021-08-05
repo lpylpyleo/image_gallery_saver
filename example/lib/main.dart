@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
@@ -38,7 +40,6 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
 
     _requestPermission();
-
   }
 
   @override
@@ -94,9 +95,44 @@ class _MyHomePageState extends State<MyHomePage> {
                 width: 200,
                 height: 44,
               ),
+              Container(
+                padding: EdgeInsets.only(top: 15),
+                child: RaisedButton(
+                  onPressed: _saveLargeFile,
+                  child: Text("Save Large File"),
+                ),
+                width: 200,
+                height: 44,
+              ),
+              Row(
+                children: [
+                  Text(
+                    '真',
+                    style: TextStyle(fontSize: 36),
+                  ),
+                  Text(
+                    '真',
+                    style: TextStyle(fontSize: 36, fontFamily: 'PingFang SC'),
+                  ),
+                  Text(
+                    '真',
+                    style: TextStyle(fontSize: 36, fontFamily: 'PingFang TC'),
+                  ),
+                ],
+              )
             ],
           ),
         ));
+  }
+
+  _saveLargeFile() async {
+    // final bytes = await rootBundle.load('assets/large.jpeg');
+    final bytes = utf8.encode((await Dio().get(
+            'https://www.learningcontainer.com/bfd_download/large-sample-image-file-download-for-testing/'))
+        .data);
+    final result = await ImageGallerySaver.saveImage(Uint8List.fromList(bytes),
+        quality: 100);
+    _toastInfo("$result");
   }
 
   _requestPermission() async {
@@ -113,10 +149,11 @@ class _MyHomePageState extends State<MyHomePage> {
     RenderRepaintBoundary boundary =
         _globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
     ui.Image image = await boundary.toImage();
-    ByteData? byteData = await (image.toByteData(format: ui.ImageByteFormat.png) as FutureOr<ByteData?>);
+    ByteData? byteData = await (image.toByteData(format: ui.ImageByteFormat.png)
+        as FutureOr<ByteData?>);
     if (byteData != null) {
       final result =
-      await ImageGallerySaver.saveImage(byteData.buffer.asUint8List());
+          await ImageGallerySaver.saveImage(byteData.buffer.asUint8List());
       print(result);
       _toastInfo(result.toString());
     }
