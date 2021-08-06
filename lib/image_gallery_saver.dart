@@ -4,20 +4,16 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 
 class ImageGallerySaver {
-  static const MethodChannel _channel =
-      const MethodChannel('image_gallery_saver');
+  static const MethodChannel _channel = const MethodChannel('image_gallery_saver');
 
   /// save image to Gallery
   /// imageBytes can't null
   /// return Map type
   /// for example:{"isSuccess":true, "filePath":String?}
   static FutureOr<dynamic> saveImage(Uint8List imageBytes,
-      {int quality = 80,
-      String? name,
-      bool isReturnImagePathOfIOS = false}) async {
+      {int quality = 80, String? name, bool isReturnImagePathOfIOS = false}) async {
     assert(imageBytes != null);
-    final result =
-        await _channel.invokeMethod('saveImageToGallery', <String, dynamic>{
+    final result = await _channel.invokeMethod('saveImageToGallery', <String, dynamic>{
       'imageBytes': imageBytes,
       'quality': quality,
       'name': name,
@@ -26,14 +22,19 @@ class ImageGallerySaver {
     return result;
   }
 
+  static FutureOr<dynamic> saveImageOrigin(Uint8List imageBytes, String? name) async {
+    final result = await _channel.invokeMethod('saveImageOriginToGallery', <String, dynamic>{
+      'imageBytes': imageBytes,
+      'name': name,
+    });
+    return result;
+  }
+
   /// Save the PNG，JPG，JPEG image or video located at [file] to the local device media gallery.
   static Future saveFile(String file, {bool isReturnPathOfIOS = false}) async {
     assert(file != null);
-    final result = await _channel.invokeMethod(
-        'saveFileToGallery', <String, dynamic>{
-      'file': file,
-      'isReturnPathOfIOS': isReturnPathOfIOS
-    });
+    final result = await _channel
+        .invokeMethod('saveFileToGallery', <String, dynamic>{'file': file, 'isReturnPathOfIOS': isReturnPathOfIOS});
     return result;
   }
 }

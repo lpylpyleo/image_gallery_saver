@@ -24,8 +24,13 @@ public class SwiftImageGallerySaverPlugin: NSObject, FlutterPlugin {
                   let isReturnImagePath = arguments["isReturnImagePathOfIOS"] as? Bool
             else { return }
             let newImage = image.jpegData(compressionQuality: CGFloat(quality / 100))!
-//            let newImage = image.pngData()!
             saveImage(UIImage(data: newImage)! , isReturnImagePath: isReturnImagePath)
+        }else if call.method == "saveImageOriginToGallery" {
+            let arguments = call.arguments as? [String: Any] ?? [String: Any]()
+            guard let imageData = (arguments["imageBytes"] as? FlutterStandardTypedData)?.data,
+                  let name = arguments["name"] as? String
+            else { return }
+            saveImageOrigin(imageData,fileName: name)
         } else if (call.method == "saveFileToGallery") {
             guard let arguments = call.arguments as? [String: Any],
                   let path = arguments["file"] as? String,
@@ -106,6 +111,50 @@ public class SwiftImageGallerySaverPlugin: NSObject, FlutterPlugin {
                 }
             }
         })
+    }
+    
+    func saveImageOrigin(_ imageData: Data, fileName: String?) {
+        var imageIds: [String] = []
+        
+        if #available(iOS 9, *) {
+            PHPhotoLibrary.shared().performChanges( {
+                let options = PHAssetResourceCreationOptions();
+                if((fileName) != nil){
+                    options.originalFilename = fileName
+                }
+            
+                let req = PHAssetCreationRequest.forAsset();
+                req.addResource(with: .photo, data: imageData, options: options);
+                req.creationDate = Date()
+                
+                if let imageId = req.placeholderForCreatedAsset?.localIdentifier {
+                    imageIds.append(imageId)
+                }
+                
+            }, completionHandler: { [unowned self] (success, error) in
+                DispatchQueue.main.async {
+                    if (success && imageIds.count > 0) {
+                        let assetResult = PHAsset.fetchAssets(withLocalIdentifiers: imageIds, options: nil)
+                        if (assetResult.count > 0) {
+                            let imageAsset = assetResult[0]
+                            let options = PHContentEditingInputRequestOptions()
+                            options.canHandleAdjustmentData = { (adjustmeta)
+                                -> Bool in true }
+                            imageAsset.requestContentEditingInput(with: options) { [unowned self] (contentEditingInput, info) in
+                                if let urlStr = contentEditingInput?.fullSizeImageURL?.absoluteString {
+                                    print(urlStr)
+                                    self.saveResult(isSuccess: true, filePath: urlStr)
+                                }
+                            }
+                        }
+                    } else {
+                        self.saveResult(isSuccess: false, error: self.errorMessage)
+                    }
+                }
+            })
+        } else {
+            // Fallback on earlier versions
+        }
     }
     
     func saveImageAtFileUrl(_ url: String, isReturnImagePath: Bool) {
